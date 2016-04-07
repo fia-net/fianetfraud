@@ -29,38 +29,34 @@ require_once _PS_MODULE_DIR_.'fianetfraud/fianetfraud.php';
 
 class AdminCertissimController extends AdminOrdersController
 {
+    public function initToolbar()
+    {
+        parent::initToolbar();
+        if (is_null($this->display)) {
+            $this->toolbar_btn['cert1'] = array(
+                'href' => $this->context->link->getAdminLink('AdminCertissim').'&action=getAllWaitingScores',
+                'desc' => $this->l('Get waiting evalulations'),
+            );
+            $this->toolbar_btn['cert2'] = array(
+                'href' => $this->context->link->getAdminLink('AdminCertissim').'&action=getReevaluations',
+                'desc' => $this->l('Get reevalulations'),
+            );
+        }
+    }
 
-	public function initToolbar()
-	{
-		parent::initToolbar();
-		if (is_null($this->display))
-		{
-			$this->toolbar_btn['cert1'] = array(
-				'href' => $this->context->link->getAdminLink('AdminCertissim').'&action=getAllWaitingScores',
-				'desc' => $this->l('Get waiting evalulations'),
-			);
-			$this->toolbar_btn['cert2'] = array(
-				'href' => $this->context->link->getAdminLink('AdminCertissim').'&action=getReevaluations',
-				'desc' => $this->l('Get reevalulations'),
-			);
-		}
-	}
-
-	public function initContent()
-	{
-		if (Tools::isSubmit('action') && Tools::getValue('action') == 'viewLog')
-		{
-			//loads the log content
-			$log_content = CertissimLogger::getLogContent();
-			$log_txt = htmlspecialchars($log_content, ENT_QUOTES, 'UTF-8');
-			$url_back = $this->context->link->getAdminLink('AdminModules').'&configure=fianetfraud';
-			$html = '<p><a href="'.$url_back.'">'.$this->l('Back to configuration page').'</a>
+    public function initContent()
+    {
+        if (Tools::isSubmit('action') && Tools::getValue('action') == 'viewLog') {
+            //loads the log content
+            $log_content = CertissimLogger::getLogContent();
+            $log_txt = htmlspecialchars($log_content, ENT_QUOTES, 'UTF-8');
+            $url_back = $this->context->link->getAdminLink('AdminModules').'&configure=fianetfraud';
+            $html = '<p><a href="'.$url_back.'">'.$this->l('Back to configuration page').'</a>
 				</p><textarea cols=\'180\' rows=\'35\' Readonly>'.$log_txt.'</textarea><p>
 					<a href="'.$url_back.'">'.$this->l('Back to configuration page').'</a></p>';
-			$this->context->smarty->assign('content', $html);
-		}
-		else
-			parent::initContent();
-	}
-
+            $this->context->smarty->assign('content', $html);
+        } else {
+            parent::initContent();
+        }
+    }
 }

@@ -31,15 +31,13 @@
  */
 class CertissimSiteconso extends CertissimXMLElement
 {
+    public function __construct($ca = '', $nb = '', $datepremcmd = '', $datederncmd = '')
+    {
+        parent::__construct();
 
-	public function __construct($ca = '', $nb = '', $datepremcmd = '', $datederncmd = '')
-	{
-		parent::__construct();
-
-		$this->childCa($ca);
-		$this->childNb($nb);
-		$this->childDatepremcmd($datepremcmd);
-		$this->childDatederncmd($datederncmd);
-	}
-
+        $this->childCa($ca);
+        $this->childNb($nb);
+        $this->childDatepremcmd($datepremcmd);
+        $this->childDatederncmd($datederncmd);
+    }
 }

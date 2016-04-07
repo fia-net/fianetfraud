@@ -32,16 +32,16 @@ require_once(dirname(__FILE__).'/../../init.php');
 include_once 'fianetfraud.php';
 
 
-if (_PS_VERSION_ < '1.5')
-	$certissim = new CertissimSac();
-else
-	$certissim = new CertissimSac(Context::getContext()->shop->id);
+if (_PS_VERSION_ < '1.5') {
+    $certissim = new CertissimSac();
+} else {
+    $certissim = new CertissimSac(Context::getContext()->shop->id);
+}
 
 /*token security*/
-if (Tools::getValue('token') == Tools::getAdminToken($certissim->getSiteid().$certissim->getLogin()))
-{
-	/*Get all FIA-NET reevaluations*/
-	fianetfraud::getReevaluations();
+if (Tools::getValue('token') == Tools::getAdminToken($certissim->getSiteid().$certissim->getLogin())) {
+    /*Get all FIA-NET reevaluations*/
+    fianetfraud::getReevaluations();
+} else {
+    Tools::redirect('Location: ../');
 }
-else
-	header('Location: ../');

@@ -18,5 +18,8 @@ CREATE TABLE IF NOT EXISTS `PREFIX_certissim_order` (
 	`profil` varchar(80),
 	`detail` varchar(80),
 	`error` varchar(255),
+	`authlevel` varchar(255),
+	`authid` varchar(255),
+	`paiement` varchar(80),
 	PRIMARY KEY (`id_cart`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=utf8;

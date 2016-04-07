@@ -31,14 +31,12 @@
  */
 class CertissimPointrelais extends CertissimXMLElement
 {
+    public function __construct($identifiant = null, $enseigne = null, $addresse = null)
+    {
+        parent::__construct();
 
-	public function __construct($identifiant = null, $enseigne = null, $addresse = null)
-	{
-		parent::__construct();
-
-		$this->childIdentifiant($identifiant);
-		$this->childEnseigne($enseigne);
-		$this->childAdresse($addresse);
-	}
-
+        $this->childIdentifiant($identifiant);
+        $this->childEnseigne($enseigne);
+        $this->childAdresse($addresse);
+    }
 }

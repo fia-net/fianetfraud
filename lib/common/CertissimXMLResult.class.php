@@ -32,18 +32,15 @@
  */
 class CertissimXMLResult extends CertissimXMLElement
 {
+    public function __call($name, array $params)
+    {
+        //fonction returnItem : retourne la valeur de l'attribute Item si existant, null sinon
+        if (preg_match('#^return.+$#', $name)) {
+            $elementname = Tools::strtolower(preg_replace('#^return(.+)$#', '$1', $name));
 
-	public function __call($name, array $params)
-	{
-		//fonction returnItem : retourne la valeur de l'attribute Item si existant, null sinon
-		if (preg_match('#^return.+$#', $name))
-		{
-			$elementname = Tools::strtolower(preg_replace('#^return(.+)$#', '$1', $name));
+            return array_key_exists($elementname, $this->getAttributes()) ? $this->getAttribute($elementname) : null;
+        }
 
-			return array_key_exists($elementname, $this->getAttributes()) ? $this->getAttribute($elementname) : null;
-		}
-
-		return parent::__call($name, $params);
-	}
-
+        return parent::__call($name, $params);
+    }
 }

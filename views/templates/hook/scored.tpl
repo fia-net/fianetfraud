@@ -1,5 +1,5 @@
 {*
-* 2007-2014 PrestaShop
+* 2007-2016 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -17,25 +17,25 @@
 * versions in the future. If you wish to customize PrestaShop for your
 * needs please refer to http://www.prestashop.com for more information.
 *
-*  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
-*  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+*  @author    PrestaShop SA <contact@prestashop.com>
+*  @copyright 2007-2016 PrestaShop SA
+*  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
 
 <br />
 <div class='panel'>
 <fieldset {if version_compare($smarty.const._PS_VERSION_,'1.5','<')}style="width: 400px"{/if}>
-  <legend><img src='{$logo_path|escape:'htmlall'}'/>{l s='Certissim Validation' mod='fianetfraud'}</legend>
-  <a href="{$url_vcd|strval}" target="_blank">{l s='See Detail' mod='fianetfraud'}</a>
+  <legend><img src='{$logo_path|escape:'htmlall':'UTF-8'}'/>{l s='Certissim Validation' mod='fianetfraud'}</legend>
+  <a href="{$url_vcd|strval|escape:'htmlall':'UTF-8'}" target="_blank">{l s='See Detail' mod='fianetfraud'}</a>
   <p>
-    {l s='Order has been evaluated: ' mod='fianetfraud'}<img src="{$path_to_picto|escape:'htmlall'}" alt="{$score}"/>
+    {l s='Order has been evaluated: ' mod='fianetfraud'}<img src="{$path_to_picto|escape:'htmlall':'UTF-8'}" alt="{$score|escape:'htmlall':'UTF-8'}"/>
   </p>
   <p>
-    {l s='More information: ' mod='fianetfraud'}{$detail}
+    {l s='More information: ' mod='fianetfraud'}{$detail|strval|escape:'htmlall':'UTF-8'}
   </p>
   <p>
-    <a href="{$url_checkout|strval}">{l s='Update the score.' mod='fianetfraud'}</a>
+    <a href="{$url_checkout|strval|escape:'htmlall':'UTF-8'}">{l s='Update the score.' mod='fianetfraud'}</a>
   </p>
 </fieldset>
 </div>

@@ -32,15 +32,14 @@
  */
 class CertissimStackResponse extends CertissimXMLResult
 {
+    public function getResults()
+    {
+        $results = array();
 
-	public function getResults()
-	{
-		$results = array();
+        foreach ($this->getChildrenByName('result') as $result) {
+            $results[] = new CertissimResultResponse($result->getXML());
+        }
 
-		foreach ($this->getChildrenByName('result') as $result)
-			$results[] = new CertissimResultResponse($result->getXML());
-
-		return $results;
-	}
-
+        return $results;
+    }
 }

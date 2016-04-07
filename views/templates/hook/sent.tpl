@@ -1,5 +1,5 @@
 {*
-* 2007-2014 PrestaShop
+* 2007-2016 PrestaShop
 *
 * NOTICE OF LICENSE
 *
@@ -17,17 +17,17 @@
 * versions in the future. If you wish to customize PrestaShop for your
 * needs please refer to http://www.prestashop.com for more information.
 *
-*  @author PrestaShop SA <contact@prestashop.com>
-*  @copyright  2007-2014 PrestaShop SA
-*  @license    http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+*  @author    PrestaShop SA <contact@prestashop.com>
+*  @copyright 2007-2016 PrestaShop SA
+*  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  International Registered Trademark & Property of PrestaShop SA
 *}
 
 <br />
 <div class='panel'>
 <fieldset {if version_compare($smarty.const._PS_VERSION_,'1.5','<')}style="width: 400px"{/if}>
-  <legend><img src='{$logo_path|escape:'htmlall'}'/>{l s='Certissim Validation' mod='fianetfraud'}</legend>
+  <legend><img src='{$logo_path|escape:'htmlall':'UTF-8'}'/>{l s='Certissim Validation' mod='fianetfraud'}</legend>
   <p>{l s='This order has been sent to Certissim and the evaluation is not ready yet. Please wait a while and ask for the score with the link below.' mod='fianetfraud'}</p>
-  <p><a href="{$url_get_eval|strval}">{l s='Ask for the score.' mod='fianetfraud'}</a></p>
+  <p><a href="{$url_get_eval|strval|escape:'htmlall':'UTF-8'}">{l s='Ask for the score.' mod='fianetfraud'}</a></p>
 </fieldset>
 </div>
