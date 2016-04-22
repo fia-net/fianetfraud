@@ -57,12 +57,14 @@ class AdminCertissim extends AdminCertissimController
             switch (Tools::getValue('action')) {
                 //if checkoutScore, redirection to the admin order page
                 case 'checkoutScore':
-                    $this->redirect_after = $link->getAdminLink('AdminOrders').'&id_order='.Tools::getValue('id_order').'&vieworder';
+                    $this->redirect_after = $link->getAdminLink('AdminOrders')
+                    .'&id_order='.Tools::getValue('id_order').'&vieworder';
                     break;
 
                 //if sendOrder, redirection to the admin order page
                 case 'sendOrder':
-                    $this->redirect_after = $link->getAdminLink('AdminOrders').'&id_order='.Tools::getValue('id_order').'&vieworder';
+                    $this->redirect_after = $link->getAdminLink('AdminOrders')
+                    .'&id_order='.Tools::getValue('id_order').'&vieworder';
                     break;
 
                 //if getAllWaitingScore, redirection to the admin orders list
@@ -114,13 +116,20 @@ class AdminCertissim extends AdminCertissimController
                 'width' => 50,
                 'search' => true,
                 'icon' => array(
-                    '0' => array('src' => '../../modules/fianetfraud/views/img/0.gif', 'alt' => 'Risque détecté'),
-                    '-1' => array('src' => '../../modules/fianetfraud/views/img/-1.gif', 'alt' => 'Pas de risque détecté'),
-                    '100' => array('src' => '../../modules/fianetfraud/views/img/100.gif', 'alt' => 'Certifiée sans risque'),
-                    'error' => array('src' => '../../modules/fianetfraud/views/img/error.gif', 'alt' => 'Erreur'),
-                    'sent' => array('src' => '../../modules/fianetfraud/views/img/sent.gif', 'alt' => 'Calcul du risque en cours'),
-                    'ready to send' => array('src' => '../../modules/fianetfraud/views/img/ready-to-send.gif', 'alt' => 'En attente du paiement'),
-                    'not concerned' => array('src' => '../../modules/fianetfraud/views/img/not-concerned.gif', 'alt' => 'Non concernée')
+                    '0' => array('src' => '../../modules/fianetfraud/views/img/0.gif',
+                        'alt' => 'Risque détecté'),
+                    '-1' => array('src' => '../../modules/fianetfraud/views/img/-1.gif',
+                        'alt' => 'Pas de risque détecté'),
+                    '100' => array('src' => '../../modules/fianetfraud/views/img/100.gif',
+                        'alt' => 'Certifiée sans risque'),
+                    'error' => array('src' => '../../modules/fianetfraud/views/img/error.gif',
+                        'alt' => 'Erreur'),
+                    'sent' => array('src' => '../../modules/fianetfraud/views/img/sent.gif',
+                        'alt' => 'Calcul du risque en cours'),
+                    'ready to send' => array('src' => '../../modules/fianetfraud/views/img/ready-to-send.gif',
+                        'alt' => 'En attente du paiement'),
+                    'not concerned' => array('src' => '../../modules/fianetfraud/views/img/not-concerned.gif',
+                        'alt' => 'Non concernée')
                 ),
             );
             $this->fields_list['score'] = $column_description;
@@ -155,17 +164,22 @@ class AdminCertissim extends AdminCertissimController
                     break;
                 }
                 if (!is_int((int)Tools::getValue('id_order'))) {
-                    CertissimLogger::insertLog(__METHOD__.' : '.__LINE__, 'Référence incorrecte : '.Tools::getValue('id_order').'. Fin checkout.');
+                    CertissimLogger::insertLog(
+                        __METHOD__.' : '.__LINE__,
+                        'Référence incorrecte : '.Tools::getValue('id_order').'. Fin checkout.'
+                    );
                     break;
                 }
 
-                //sends the order to Certissim and update the Certissim order table if the order is ready to be sent, do nothing otherwise
+                //sends the order to Certissim and update the Certissim order table
+                // if the order is ready to be sent, do nothing otherwise
                 $this->sendAndUpdateOrder(Tools::getValue('id_order'));
 
                 //if PS 1.4 or lower, redirect definition
                 if (_PS_VERSION_ < '1.5') {
                     //redirects the user to the admin order page
-                    $admin_dir = Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.Tools::substr(PS_ADMIN_DIR, strrpos(PS_ADMIN_DIR, '/') + 1);
+                    $admin_dir = Tools::getShopDomainSsl(true, true).__PS_BASE_URI__
+                        .Tools::substr(PS_ADMIN_DIR, strrpos(PS_ADMIN_DIR, '/') + 1);
                     $url = $admin_dir.'/index.php?tab=AdminCertissim&id_order='.Tools::getValue('id_order').'
 						&vieworder&token='.Tools::getAdminTokenLite('AdminCertissim');
                     Tools::redirect($url, '');
@@ -176,31 +190,48 @@ class AdminCertissim extends AdminCertissimController
             case 'checkoutScore':
                 //if no order specified: end of process
                 if (!Tools::isSubmit('id_order')) {
-                    CertissimLogger::insertLog(__METHOD__.' : '.__LINE__, 'pas de commande indiquée. Fin checkout.');
+                    CertissimLogger::insertLog(
+                        __METHOD__.' : '.__LINE__,
+                        'pas de commande indiquée. Fin checkout.'
+                    );
                     break;
                 }
                 if (!is_int((int)Tools::getValue('id_order'))) {
-                    CertissimLogger::insertLog(__METHOD__.' : '.__LINE__, 'Référence incorrecte : '.Tools::getValue('id_order').'. Fin checkout.');
+                    CertissimLogger::insertLog(
+                        __METHOD__.' : '.__LINE__,
+                        'Référence incorrecte : '.Tools::getValue('id_order').'. Fin checkout.'
+                    );
                     break;
                 }
 
-                CertissimLogger::insertLog(__METHOD__.' : '.__LINE__, '----- Checkout du score order '.Tools::getValue('id_order'));
+                CertissimLogger::insertLog(
+                    __METHOD__.' : '.__LINE__,
+                    '----- Checkout du score order '.Tools::getValue('id_order')
+                );
                 //updating the order
                 $this->module->updateOrder(Tools::getValue('id_order'));
-                CertissimLogger::insertLog(__METHOD__.' : '.__LINE__, '----- Fin checkout ----');
+                CertissimLogger::insertLog(
+                    __METHOD__.' : '.__LINE__,
+                    '----- Fin checkout ----'
+                );
 
                 //if PS 1.4 or lower, redirect definition
                 if (_PS_VERSION_ < '1.5') {
                     //redirects the user to the admin order page
-                    $admin_dir = Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.Tools::substr(_PS_ADMIN_DIR_, strrpos(_PS_ADMIN_DIR_, '/') + 1);
+                    $admin_dir = Tools::getShopDomainSsl(true, true).__PS_BASE_URI__
+                        .Tools::substr(_PS_ADMIN_DIR_, strrpos(_PS_ADMIN_DIR_, '/') + 1);
                     $url = $admin_dir.'/index.php?tab=AdminCertissim&id_order='.Tools::getValue('id_order').'
 						&vieworder&token='.Tools::getAdminTokenLite('AdminCertissim');
-                    CertissimLogger::insertLog(__METHOD__.' : '.__LINE__, 'Redirection vers '.$url);
+                    CertissimLogger::insertLog(
+                        __METHOD__.' : '.__LINE__,
+                        'Redirection vers '.$url
+                    );
                     Tools::redirect($url, '');
                 }
                 break;
 
-            //action getAllWaitingScores: calls Certissim to get the score of each order that is in state 'sent' or 'error'
+            //action getAllWaitingScores: calls Certissim to get the score of
+            // each order that is in state 'sent' or 'error'
             case 'getAllWaitingScores':
 
                 fianetfraud::getEvaluations();
@@ -208,21 +239,22 @@ class AdminCertissim extends AdminCertissimController
                 //if PS 1.4 or lower, redirect definition
                 if (_PS_VERSION_ < '1.5') {
                     //redirects the user to the admin order page
-                    $admin_dir = Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.Tools::substr(_PS_ADMIN_DIR_, strrpos(_PS_ADMIN_DIR_, '/') + 1);
+                    $admin_dir = Tools::getShopDomainSsl(true, true)
+                        .__PS_BASE_URI__.Tools::substr(_PS_ADMIN_DIR_, strrpos(_PS_ADMIN_DIR_, '/') + 1);
                     $url = $admin_dir.'/index.php?tab=AdminCertissim&token='.Tools::getAdminTokenLite('AdminCertissim');
                     CertissimLogger::insertLog(__METHOD__.' : '.__LINE__, 'Redirection vers '.$url);
                     Tools::redirect($url, '');
                 }
                 break;
-            //action getReevaluations: calls Certissim to get the list of orders that have been reevaluated, and updates them
+            //action getReevaluations: calls Certissim to get the list of orders
+            //that have been reevaluated, and updates them
             case 'getReevaluations':
                 CertissimLogger::insertLog(__METHOD__.' : '.__LINE__, '----- Get reevals ----'); //finlog
                 //if PS 1.4 or lower: gets reevaluations for one shop (multishop does not exist)
                 if (_PS_VERSION_ < '1.5' || !Shop::isFeatureActive()) {
                     fianetfraud::getReevaluations();
-                }
-                //if PS 1.5 or greater: gets the reevaluations for each shop
-                else {
+                } else {
+                    //if PS 1.5 or greater: gets the reevaluations for each shop
                     foreach (Shop::getShops() as $shop) {
                         fianetfraud::getReevaluations($shop['id_shop']);
                     }
@@ -232,7 +264,8 @@ class AdminCertissim extends AdminCertissimController
                 //if PS 1.4 or lower, redirect definition
                 if (_PS_VERSION_ < '1.5') {
                     //redirects the user to the admin order page
-                    $admin_dir = Tools::getShopDomainSsl(true, true).__PS_BASE_URI__.Tools::substr(_PS_ADMIN_DIR_, strrpos(_PS_ADMIN_DIR_, '/') + 1);
+                    $admin_dir = Tools::getShopDomainSsl(true, true)
+                        .__PS_BASE_URI__.Tools::substr(_PS_ADMIN_DIR_, strrpos(_PS_ADMIN_DIR_, '/') + 1);
                     $url = $admin_dir.'/index.php?tab=AdminCertissim&token='.Tools::getAdminTokenLite('AdminCertissim');
                     CertissimLogger::insertLog(__METHOD__.' : '.__LINE__, 'Redirection vers '.$url);
                     Tools::redirect($url, '');
@@ -250,7 +283,10 @@ class AdminCertissim extends AdminCertissimController
         if ($sent) {
             fianetfraud::switchOrderToState($id_order, 'sent');
         } else {
-            CertissimLogger::insertLog(__METHOD__.' : '.__LINE__, 'Envoi de la commande '.$id_order.' vers Certissim a échoué.');
+            CertissimLogger::insertLog(
+                __METHOD__.' : '.__LINE__,
+                'Envoi de la commande '.$id_order.' vers Certissim a échoué.'
+            );
         }
     }
 }

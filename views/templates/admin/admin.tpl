@@ -23,7 +23,23 @@
 *  International Registered Trademark & Property of PrestaShop SA
 *}
  
-{$head_msg|strval}
+
+{if $head_msg|escape:'htmlall':'UTF-8' <> ''}
+    <div class="module_confirmation conf confirm">
+    <img src="{$path_confirmation|escape:'htmlall':'UTF-8'}" alt="" title="" />{$head_msg|escape:'htmlall':'UTF-8'}</div>
+{/if}
+
+{if $error_msg|escape:'htmlall':'UTF-8' <> ''}
+    <div class="module_error alert error">
+	<img src="{$path_error|escape:'htmlall':'UTF-8'}" alt="" title="" />{$error_msg|escape:'htmlall':'UTF-8'}
+	<ul>
+	{foreach from=$errors item=error_label name=errors}
+	    <li>{$error_label|escape:'htmlall':'UTF-8'}</li>
+	{/foreach}
+	</ul>
+    </div>
+{/if}
+
 <fieldset>
 	<legend><img src="{$image_path|escape:'htmlall':'UTF-8'}"/>{l s='FIA-NET - Certissim' mod='fianetfraud'}</legend>
 		{l s='FIA-NET, le leader français de la lutte contre la fraude à  la carte bancaire sur internet !' mod='fianetfraud'}
@@ -38,7 +54,7 @@
 	<br />
 	{l s='Ne restez pas isolé face à  l\'explosion des réseaux de fraudeurs !' mod='fianetfraud'}
 	<p>
-	{l s='To sign in, check out: ' mod='fianetfraud'} <u><a href="https://www.fia-net.com/marchands/devispartenaire.php?p=185" target="_blank">{l s='Fia-net Website' mod='fianetfraud'}</a></u>
+	{l s='To sign in, check out: ' mod='fianetfraud'} <u><a href="http://www.fia-net-group.com/formulaire-de-contact-prestashop" target="_blank">{l s='Fia-net Website' mod='fianetfraud'}</a></u>
 </p>
 </fieldset>
 

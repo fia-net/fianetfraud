@@ -161,8 +161,6 @@ class CertissimTools extends CertissimMother
         // Convert string to ISO_8859-1
     if ($from == 'UTF-8') {
         $iso_string = utf8_decode($string);
-    } elseif ($from == 'UTF7-IMAP') {
-        $iso_string = imap_utf7_decode($string);
     } else {
         $iso_string = $string;
     }
@@ -170,8 +168,6 @@ class CertissimTools extends CertissimMother
 // Convert ISO_8859-1 string to result coding
     if ($to == 'UTF-8') {
         return (utf8_encode($iso_string));
-    } elseif ($to == 'UTF7-IMAP') {
-        return (imap_utf7_encode($iso_string));
     } else {
         return ($iso_string);
     }
