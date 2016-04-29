@@ -203,6 +203,7 @@ class Fianetfraud extends Module
 
         return (parent::install()
             && $this->registerHook('newOrder')
+            && $this->registerHook('paymentConfirm')
             && $this->registerHook('adminOrder')
             && $this->registerHook('backOfficeHeader')
             && $this->registerHook('backBeforePayment')
@@ -228,7 +229,7 @@ class Fianetfraud extends Module
      */
     private function loadProductCategories()
     {
-        $categories = Category::getSimpleCategories($this->context->language->id);
+        $categories = Category::getHomeCategories($this->context->language->id);
 
         $shop_categories = array();
         foreach ($categories as $category) {
@@ -340,10 +341,9 @@ class Fianetfraud extends Module
         }
         if (Tools::strlen(Tools::getValue('certissim_siteid')) < 1) {
             $this->_errors[] = $this->l('Siteid can\'t be empty');
-        } else {
-            if (!preg_match('#^[0-9]+$#', Tools::getValue('certissim_siteid'))) {
-                $this->_errors[] = $this->l('Siteid has to be integer.');
-            }
+        }
+        if (!preg_match('#^[0-9]+$#', Tools::getValue('certissim_siteid'))) {
+            $this->_errors[] = $this->l('Siteid has to be integer.');
         }
         if (!in_array(
             Tools::getValue('certissim_status'),
@@ -630,8 +630,8 @@ class Fianetfraud extends Module
             }
         }
         
-        $path_error = _PS_IMG_.'admin/warning.gif';
-        $path_confirmation = _PS_IMG_.'admin/ok.gif';
+        $path_error = __PS_BASE_URI__ . 'modules/' . $this->name . '/views/img/warning.gif';
+        $path_confirmation = __PS_BASE_URI__ . 'modules/' . $this->name . '/views/img/ok.gif';
         
         //lists all categories
         $shop_categories = $this->loadProductCategories();
@@ -836,7 +836,35 @@ class Fianetfraud extends Module
      * @param array $params
      * @return boolean
      */
-    
+    public function hookPaymentConfirm($params)
+    {
+        //gets the actual certissim_state
+        /* $id_order = $params['id_order'];
+          $sql = 'SELECT s.`label`
+          FROM `' . _DB_PREFIX_ . self::CERTISSIM_STATE_TABLE_NAME . '` s
+          INNER JOIN `' . _DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME . "` o
+          ON o.id_certissim_state=s.id_certissim_state
+          WHERE o.id_order=$id_order";
+          $state = Db::getInstance()->getValue($sql);
+          CertissimLogger::insertLog(__METHOD__ . ' : ' . __LINE__, 'Commande $id_order en état ' . $state);
+
+          if ($state == 'ready to send')
+          {
+          //if order ready to send, sending
+          $sent_to_certissim = $this->buildAndSend($id_order);
+          if (!$sent_to_certissim)
+          {
+          CertissimLogger::insertLog(__METHOD__ . ' : ' . __LINE__, 'Envoi de la commande ' 
+         * . $id_order . ' vers Certissim a échoué.');
+          return false;
+          }
+          } else //if order not ready to be sent: log
+          CertissimLogger::insertLog(__METHOD__ . ' : ' . __LINE__, 'Commande ' 
+         * . $id_order . ' pas dans le bon état pour envoi : ' . $state);
+
+          return true; */
+    }
+
     public function hookPostUpdateOrderStatus($params)
     {
         $order_state = $params['newOrderStatus'];
@@ -899,7 +927,9 @@ class Fianetfraud extends Module
 
         //builds the Order object
         $order = new Order($params['id_order']);
-        
+
+        //$this->buildXMLOrder($params['id_order']);
+
         /*         * ************* MODIF FRANFINANCE *************** */
         $payment_type = $order->module;
 
@@ -1542,13 +1572,13 @@ class Fianetfraud extends Module
             }
 
             $product_ref = str_replace(
-                array('&', "'", 'Ø', '|', '®', '™', '©'),
-                array('', '', '', '', '', '', ''),
+                array('&', "'", 'Ø', '|'),
+                array('', '', '', ''),
                 $product_ref
             );
             $product_name = str_replace(
-                array('&', "'", 'Ø', '|', '®', '™', '©'),
-                array('', '', '', '', '', '', ''),
+                array('&', "'", 'Ø', '|'),
+                array('', '', '', ''),
                 $product_name
             );
 
@@ -2464,7 +2494,7 @@ class Fianetfraud extends Module
         }
 
         return '<link rel="stylesheet" type="text/css" href="'
-        . __PS_BASE_URI__ . 'modules/' . $this->name . '/views/css/toolbarAdmin.css" />';
+        . __PS_BASE_URI__ . 'modules/' . $this->name . '/views/css/fianetfraud.css" />';
     }
 
     /**
@@ -2922,6 +2952,42 @@ class Fianetfraud extends Module
                 ); //finlog
             }
         }
+    }
+
+    /**
+     * Insert id_cart on fianetsceau_order table when page payment is called
+     * 
+     * @param type Array 
+     */
+    public function hookPaymentTop($params)
+    {
+
+        //MODIF COPILOT
+        /* $shop_payments = $this->loadPaymentMethods();
+
+
+          foreach ($shop_payments as $id => $shop_payment){
+
+          $payment_name = $shop_payment['name'];
+
+          if($payment_name == 'bankwire'){
+          $mod = Module::getInstanceByName($payment_name);
+          $mod->active = false;
+          }
+
+          } */
+        /////////////////////////////////////////
+
+
+
+        /* $id_cart = $params['cart']->id;
+          if ($this->checkCartID($id_cart) == false)
+          //inserts the order into the certissim table with the state previously set
+          self::insertCertissimOrder(array(
+          'id_cart' => (int) $id_cart,
+          'id_certissim_state' => '0',
+          'customer_ip_address' => Tools::getRemoteAddr(),
+          'date' => date('Y-m-d H:i:s'))); */
     }
 
     /**

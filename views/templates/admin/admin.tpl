@@ -23,14 +23,14 @@
 *  International Registered Trademark & Property of PrestaShop SA
 *}
  
-
+<div id='fianetfraud_admin_content'>
 {if $head_msg|escape:'htmlall':'UTF-8' <> ''}
-    <div class="module_confirmation conf confirm">
+    <div class="fianetfraudconf">
     <img src="{$path_confirmation|escape:'htmlall':'UTF-8'}" alt="" title="" />{$head_msg|escape:'htmlall':'UTF-8'}</div>
 {/if}
 
 {if $error_msg|escape:'htmlall':'UTF-8' <> ''}
-    <div class="module_error alert error">
+    <div class="fianetfrauderror">
 	<img src="{$path_error|escape:'htmlall':'UTF-8'}" alt="" title="" />{$error_msg|escape:'htmlall':'UTF-8'}
 	<ul>
 	{foreach from=$errors item=error_label name=errors}
@@ -270,3 +270,4 @@
 	<center><input type="submit" name="submitSettings" value="{l s='Save' mod='fianetfraud'}" class="button" /></center>
 
 </form>
+</div>
