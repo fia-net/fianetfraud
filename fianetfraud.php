@@ -124,6 +124,7 @@ class Fianetfraud extends Module
         $this->version = '3.14';
         $this->tab = 'payment_security';
         $this->author = 'Fia-Net';
+        $this->module_key = '8c9a49cceb36f910a39feda51753f466';
 
         parent::__construct();
 
@@ -172,8 +173,9 @@ class Fianetfraud extends Module
 
         //Certissim order stats insertion
         foreach ($this->certissim_states as $id => $label) {
-            $sql = 'INSERT INTO `' . _DB_PREFIX_ . self::CERTISSIM_STATE_TABLE_NAME . "` (`id_certissim_state`,`label`) 
-				VALUES ('" . (int) $id . "','" . (string) $label . "')";
+            $sql = 'INSERT INTO `' .
+                _DB_PREFIX_ . self::CERTISSIM_STATE_TABLE_NAME . "` (`id_certissim_state`,`label`) 
+				VALUES ('" . (int) $id . "','" . pSQL($label) . "')";
             $insert = Db::getInstance()->execute($sql);
             if (!$insert) {
                 CertissimLogger::insertLog(
@@ -207,6 +209,7 @@ class Fianetfraud extends Module
             && $this->registerHook('adminOrder')
             && $this->registerHook('backOfficeHeader')
             && $this->registerHook('backBeforePayment')
+            && $this->registerHook('Cart')
             && $this->registerHook('postUpdateOrderStatus'));
     }
 
@@ -217,7 +220,10 @@ class Fianetfraud extends Module
         $tab_controller_main = new Tab($tab_controller_main_id);
         $tab_controller_main->delete();
         //drops certissim state table
-        Db::getInstance()->execute('DROP TABLE IF EXISTS `' . _DB_PREFIX_ . self::CERTISSIM_STATE_TABLE_NAME . '`');
+        Db::getInstance()->execute(
+            'DROP TABLE IF EXISTS `' .
+            _DB_PREFIX_ . self::CERTISSIM_STATE_TABLE_NAME . '`'
+        );
 
         return parent::uninstall();
     }
@@ -333,18 +339,21 @@ class Fianetfraud extends Module
      */
     private function formIsValid()
     {
-        if (Tools::strlen(Tools::getValue('certissim_login')) < 1) {
-            $this->_errors[] = $this->l('Login can\'t be empty');
+        if (!Tools::getValue('certissim_franfinance_status')) {
+            if (Tools::strlen(Tools::getValue('certissim_login')) < 1) {
+                $this->_errors[] = $this->l('Login can\'t be empty');
+            }
+            if (Tools::strlen(Tools::getValue('certissim_password')) < 1) {
+                $this->_errors[] = $this->l('Password can\'t be empty');
+            }
+            if (Tools::strlen(Tools::getValue('certissim_siteid')) < 1) {
+                $this->_errors[] = $this->l('Siteid can\'t be empty');
+            }
+            if (!preg_match('#^[0-9]+$#', Tools::getValue('certissim_siteid'))) {
+                $this->_errors[] = $this->l('Siteid has to be integer.');
+            }
         }
-        if (Tools::strlen(Tools::getValue('certissim_password')) < 1) {
-            $this->_errors[] = $this->l('Password can\'t be empty');
-        }
-        if (Tools::strlen(Tools::getValue('certissim_siteid')) < 1) {
-            $this->_errors[] = $this->l('Siteid can\'t be empty');
-        }
-        if (!preg_match('#^[0-9]+$#', Tools::getValue('certissim_siteid'))) {
-            $this->_errors[] = $this->l('Siteid has to be integer.');
-        }
+        
         if (!in_array(
             Tools::getValue('certissim_status'),
             $this->certissim_statuses
@@ -630,8 +639,8 @@ class Fianetfraud extends Module
             }
         }
         
-        $path_error = __PS_BASE_URI__ . 'modules/' . $this->name . '/views/img/warning.gif';
-        $path_confirmation = __PS_BASE_URI__ . 'modules/' . $this->name . '/views/img/ok.gif';
+        $path_error = _PS_IMG_.'admin/warning.gif';
+        $path_confirmation = _PS_IMG_.'admin/ok.gif';
         
         //lists all categories
         $shop_categories = $this->loadProductCategories();
@@ -747,7 +756,7 @@ class Fianetfraud extends Module
         //checks if the order already exists
         $sql_secure = 'SELECT *
 			FROM `' . _DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME . '`
-			WHERE `id_order`=' . $params['order']->id;
+			WHERE `id_order`=' . (int) $params['order']->id;
         $select = Db::getInstance()->execute($sql_secure);
         $count = Db::getInstance()->numRows();
         //if order exists, end of process
@@ -811,58 +820,24 @@ class Fianetfraud extends Module
             . 'FROM `' . _DB_PREFIX_ . self::CERTISSIM_STATE_TABLE_NAME . "` "
             . "WHERE `label`='$state_label'";
         $state_id = Db::getInstance()->getValue($state_sql);
-
-        //update the order into the certissim table with the state previously set
-        self::updateCertissimOrder(
-            $params['order']->id_cart,
-            array(
-            'id_order' => (int) $params['order']->id,
-            'id_certissim_state' => $state_id,
-            'date' => date('Y-m-d H:i:s'),
-            /*             * ************* MODIF FRANFINANCE *************** */
-            'paiement' => $payment_name,
-            /*             * ************* MODIF FRANFINANCE *************** */
-            ),
-            true
-        );
+       
+        if ($this->checkCartID($params['order']->id_cart) == false) {
+            self::insertCertissimOrder(array(
+                'id_cart' => (int) $params['order']->id_cart,
+                'id_order' => (int) $params['order']->id,
+                'id_certissim_state' => $state_id,
+                'customer_ip_address' => $this->context->cookie->custom_ip,
+                'date' => date('Y-m-d H:i:s'),
+                'paiement' => $payment_name,
+            ));
+        }
 
         return true;
     }
-
-    /**
-     * sends the order when the payment is confirmed only if 
-     * order has never been sent and payment method activated for Certissim
-     * 
-     * @param array $params
-     * @return boolean
-     */
-    public function hookPaymentConfirm($params)
+    
+    public function hookCart($params)
     {
-        //gets the actual certissim_state
-        /* $id_order = $params['id_order'];
-          $sql = 'SELECT s.`label`
-          FROM `' . _DB_PREFIX_ . self::CERTISSIM_STATE_TABLE_NAME . '` s
-          INNER JOIN `' . _DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME . "` o
-          ON o.id_certissim_state=s.id_certissim_state
-          WHERE o.id_order=$id_order";
-          $state = Db::getInstance()->getValue($sql);
-          CertissimLogger::insertLog(__METHOD__ . ' : ' . __LINE__, 'Commande $id_order en état ' . $state);
-
-          if ($state == 'ready to send')
-          {
-          //if order ready to send, sending
-          $sent_to_certissim = $this->buildAndSend($id_order);
-          if (!$sent_to_certissim)
-          {
-          CertissimLogger::insertLog(__METHOD__ . ' : ' . __LINE__, 'Envoi de la commande ' 
-         * . $id_order . ' vers Certissim a échoué.');
-          return false;
-          }
-          } else //if order not ready to be sent: log
-          CertissimLogger::insertLog(__METHOD__ . ' : ' . __LINE__, 'Commande ' 
-         * . $id_order . ' pas dans le bon état pour envoi : ' . $state);
-
-          return true; */
+        $this->context->cookie->__set('customer_ip', Tools::getRemoteAddr());
     }
 
     public function hookPostUpdateOrderStatus($params)
@@ -870,7 +845,7 @@ class Fianetfraud extends Module
         $order_state = $params['newOrderStatus'];
         if ($order_state->id == 2) {
             //gets the actual certissim_state
-            $id_order = $params['id_order'];
+            $id_order = (int) $params['id_order'];
             $sql = 'SELECT s.`label` 
 			FROM `' . _DB_PREFIX_ . self::CERTISSIM_STATE_TABLE_NAME . '` s
 			INNER JOIN `' . _DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME . "` o
@@ -918,7 +893,7 @@ class Fianetfraud extends Module
 			FROM `' . _DB_PREFIX_ . self::CERTISSIM_STATE_TABLE_NAME . '` s
 			INNER JOIN `' . _DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME . '` o
 			ON o.`id_certissim_state` = s.`id_certissim_state`
-			WHERE o.`id_order`=' . $params['id_order'];
+			WHERE o.`id_order`=' . (int) $params['id_order'];
         $order_label = Db::getInstance()->getValue($sql_order);
         CertissimLogger::insertLog(
             __METHOD__ . ' : ' . __LINE__,
@@ -2445,7 +2420,7 @@ class Fianetfraud extends Module
     {
         $sql_state = 'SELECT `id_certissim_state` '
             . 'FROM `' . _DB_PREFIX_ . self::CERTISSIM_STATE_TABLE_NAME . '` '
-            . 'WHERE `label`="' . $state_label . '"';
+            . 'WHERE `label`="' . pSQL($state_label) . '"';
         $id_state = Db::getInstance()->getValue($sql_state);
         self::updateCertissimOrder(
             $id_order,
@@ -2468,7 +2443,7 @@ class Fianetfraud extends Module
 			FROM `' . _DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME . '` co 
 			INNER JOIN `' . _DB_PREFIX_ . self::CERTISSIM_STATE_TABLE_NAME . "` cs 
 			ON cs.`id_certissim_state`=co.`id_certissim_state` 
-			WHERE co.`id_order`='$id_order'";
+			WHERE co.`id_order`='".(int) $id_order;
         $actual_state_label = Db::getInstance()->getValue($sql_order_state);
 
         if (is_null($state_label)) {
@@ -2494,7 +2469,7 @@ class Fianetfraud extends Module
         }
 
         return '<link rel="stylesheet" type="text/css" href="'
-        . __PS_BASE_URI__ . 'modules/' . $this->name . '/views/css/fianetfraud.css" />';
+        . __PS_BASE_URI__ . 'modules/' . $this->name . '/views/css/toolbarAdmin.css" />';
     }
 
     /**
@@ -2827,7 +2802,7 @@ class Fianetfraud extends Module
 				SET `avancement`='" . pSQL($transaction->returnAvancement()) . "',
 					`date`='" . pSQL($transaction->getEvalDate()) . "', `score`='" . pSQL($transaction->getEval()) . "',
 					`detail`='" . pSQL($transaction->getDetail()) . "', `profil`='" . pSQL($transaction->getEvalInfo()) . "'
-				WHERE `id_order`=" . $transaction->returnRefid();
+				WHERE `id_order`=" . (int) $transaction->returnRefid();
             $update = Db::getInstance()->execute($sql);
             fianetfraud::switchOrderToState(
                 $transaction->returnRefid(),
@@ -2857,7 +2832,8 @@ class Fianetfraud extends Module
     {
 
         /*         * ************* MODIF FRANFINANCE *************** */
-        $fieldvalues = implode("','", Fianetfraud::$specific_payments);
+        $fields = array_map('pSQL', Fianetfraud::$specific_payments);
+        $fieldvalues = implode("','", $fields);
 
         if (_PS_VERSION_ < '1.5' || !Shop::isFeatureActive()) {
             $sql_orders = '
@@ -2865,7 +2841,7 @@ class Fianetfraud extends Module
 					FROM `' . _DB_PREFIX_ . Fianetfraud::CERTISSIM_ORDER_TABLE_NAME . '` o 
 					INNER JOIN `' . _DB_PREFIX_ . Fianetfraud::CERTISSIM_STATE_TABLE_NAME . "` s 
 					ON o.`id_certissim_state`=s.`id_certissim_state` 
-					WHERE o.payment_type NOT IN ('" . $fieldvalues . "') AND s.`label`='sent'
+					WHERE o.paiement NOT IN ('" . $fieldvalues . "') AND s.`label`='sent'
 					OR s.`label`='error'";
             $orders = Db::getInstance()->executeS($sql_orders);
             $ref_list = array();
@@ -2913,7 +2889,7 @@ class Fianetfraud extends Module
 							INNER JOIN `' . _DB_PREFIX_ . "orders` ord 
 							ON o.`id_order`=ord.`id_order` 
 							WHERE ord.`id_shop`='" . $shop['id_shop'] . "' 
-							    AND o.payment_type NOT IN ('" . $fieldvalues . "') 
+							    AND o.paiement NOT IN ('" . $fieldvalues . "') 
 								AND (s.`label`='sent' OR s.`label`='error')
 						";
                 /*                 * ************* MODIF FRANFINANCE *************** */
@@ -2954,41 +2930,6 @@ class Fianetfraud extends Module
         }
     }
 
-    /**
-     * Insert id_cart on fianetsceau_order table when page payment is called
-     * 
-     * @param type Array 
-     */
-    public function hookPaymentTop($params)
-    {
-
-        //MODIF COPILOT
-        /* $shop_payments = $this->loadPaymentMethods();
-
-
-          foreach ($shop_payments as $id => $shop_payment){
-
-          $payment_name = $shop_payment['name'];
-
-          if($payment_name == 'bankwire'){
-          $mod = Module::getInstanceByName($payment_name);
-          $mod->active = false;
-          }
-
-          } */
-        /////////////////////////////////////////
-
-
-
-        /* $id_cart = $params['cart']->id;
-          if ($this->checkCartID($id_cart) == false)
-          //inserts the order into the certissim table with the state previously set
-          self::insertCertissimOrder(array(
-          'id_cart' => (int) $id_cart,
-          'id_certissim_state' => '0',
-          'customer_ip_address' => Tools::getRemoteAddr(),
-          'date' => date('Y-m-d H:i:s'))); */
-    }
 
     /**
      * Check if id_cart exists on fianetsceau_order table
@@ -3046,17 +2987,14 @@ class Fianetfraud extends Module
     {
         $exist = $this->tableExists(self::CERTISSIM_ORDER_TABLE_NAME);
 
-        //$sql = 'SELECT * FROM `' . _DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME . '`';
-        //$query_result = Db::getInstance()->executeS($sql);
-
         if ($exist) {
             Db::getInstance()->execute(
                 'CREATE TABLE `' . _DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME_TEMP . '` '
-                . 'LIKE `' . _DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME . '`'
+                . 'LIKE `' . pSQL(_DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME) . '`'
             );
             Db::getInstance()->execute(
                 'INSERT INTO `' . _DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME_TEMP . '` '
-                . 'SELECT * FROM `' . _DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME . '`'
+                . 'SELECT * FROM `' . pSQL(_DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME) . '`'
             );
             CertissimLogger::insertLog(
                 __METHOD__ . ' : ' . __LINE__,
@@ -3080,7 +3018,7 @@ class Fianetfraud extends Module
      */
     public function tableExists($table_search)
     {
-        return Db::getInstance()->ExecuteS('SHOW tables LIKE "' . _DB_PREFIX_ . pSQL($table_search) . '"');
+        return Db::getInstance()->ExecuteS('SHOW tables LIKE "' . pSQL(_DB_PREFIX_ . $table_search) . '"');
     }
 
     /**
@@ -3089,7 +3027,7 @@ class Fianetfraud extends Module
      */
     public function restoreCertissimOrders()
     {
-        $sql = 'SELECT * FROM `' . _DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME_TEMP . '`';
+        $sql = 'SELECT * FROM `' ._DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME_TEMP . '`';
         $query_result = Db::getInstance()->executeS($sql);
 
         if ($query_result) {
@@ -3109,7 +3047,7 @@ class Fianetfraud extends Module
         }
 
         Db::getInstance()->execute(
-            'DROP TABLE IF EXISTS `' . _DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME_TEMP . '`'
+            'DROP TABLE IF EXISTS `' . pSQL(_DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME_TEMP) . '`'
         );
     }
 
@@ -3120,18 +3058,8 @@ class Fianetfraud extends Module
      */
     public function hookBackBeforePayment($params)
     {
-        //insertion panier
         $id_cart = $params['cart']->id;
-
-        if ($this->checkCartID($id_cart) == false) {
-            //inserts the order into the certissim table with the state previously set
-            self::insertCertissimOrder(array(
-                'id_cart' => (int) $id_cart,
-                'id_certissim_state' => '0',
-                'customer_ip_address' => Tools::getRemoteAddr(),
-                'date' => date('Y-m-d H:i:s')));
-        }
-
+        
         //if copilot enabled
         if (Configuration::get('CERTISSIM_COPILOT_STATUS')) {
             $xml = $this->buildXMLOrder($id_cart, true);
@@ -3336,7 +3264,7 @@ class Fianetfraud extends Module
     {
         //recuperer les order FF qui ont 1 state 2
         $sql = 'SELECT `id_order` '
-            . 'FROM `' . _DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME . "` "
+            . 'FROM `' . pSQL(_DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME) . "` "
             . "WHERE `id_certissim_state` = 2 AND `paiement` LIKE 'franfinance'";
         $query_result = Db::getInstance()->executeS($sql);
 

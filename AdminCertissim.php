@@ -84,7 +84,8 @@ class AdminCertissim extends AdminCertissimController
         }
         
         /*************** MODIF FRANFINANCE ****************/
-        $fieldvalues = implode('","', Fianetfraud::$specific_payments);
+        $fields = array_map('pSQL', Fianetfraud::$specific_payments);
+        $fieldvalues = implode('","', $fields);
 
         $this->_select .= ',
 			IF(
