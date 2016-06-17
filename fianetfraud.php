@@ -121,7 +121,7 @@ class Fianetfraud extends Module
     public function __construct()
     {
         $this->name = 'fianetfraud';
-        $this->version = '3.14';
+        $this->version = '3.15';
         $this->tab = 'payment_security';
         $this->author = 'Fia-Net';
         $this->module_key = '8c9a49cceb36f910a39feda51753f466';
@@ -821,15 +821,30 @@ class Fianetfraud extends Module
             . "WHERE `label`='$state_label'";
         $state_id = Db::getInstance()->getValue($state_sql);
        
-        if ($this->checkCartID($params['order']->id_cart) == false) {
-            self::insertCertissimOrder(array(
-                'id_cart' => (int) $params['order']->id_cart,
+        if (version_compare(_PS_VERSION_, '1.7', '<')) {
+            //update the order into the certissim table with the state previously set
+            self::updateCertissimOrder(
+                $params['order']->id_cart,
+                array(
                 'id_order' => (int) $params['order']->id,
                 'id_certissim_state' => $state_id,
-                'customer_ip_address' => $this->context->cookie->custom_ip,
                 'date' => date('Y-m-d H:i:s'),
                 'paiement' => $payment_name,
-            ));
+                ),
+                true
+            );
+        } else {
+            //insert order in certissim table
+            if ($this->checkCartID($params['order']->id_cart) == false) {
+                self::insertCertissimOrder(array(
+                    'id_cart' => (int) $params['order']->id_cart,
+                    'id_order' => (int) $params['order']->id,
+                    'id_certissim_state' => $state_id,
+                    'customer_ip_address' => $this->context->cookie->custom_ip,
+                    'date' => date('Y-m-d H:i:s'),
+                    'paiement' => $payment_name,
+                ));
+            }
         }
 
         return true;
@@ -903,7 +918,7 @@ class Fianetfraud extends Module
         //builds the Order object
         $order = new Order($params['id_order']);
 
-        //$this->buildXMLOrder($params['id_order']);
+        $this->buildXMLOrder($params['id_order']);
 
         /*         * ************* MODIF FRANFINANCE *************** */
         $payment_type = $order->module;
@@ -2196,9 +2211,10 @@ class Fianetfraud extends Module
                 }
             }
             /*             * ************* MODIF FRANFINANCE *************** */
-
+//d($this->getAuthID($order->id_cart));
             if (Configuration::get('CERTISSIM_COPILOT_STATUS')) {
                 if ($this->getAuthID($order->id_cart)) {
+                    
                     $xml_element_payment->addChild(
                         '<authRequestID>' .
                         $this->getAuthID($order->id_cart) . '</authRequestID>'
@@ -2208,7 +2224,7 @@ class Fianetfraud extends Module
         }
 
         //initialization of the element <stack>
-        $stack = new CertissimXMLElement('<stack></stack>');
+        //$stack = new CertissimXMLElement('<stack></stack>');
 
         //agregates each elements in a main stream
         $xml_element_invoice_customer->childSiteconso($xml_element_invoice_customer_stats);
@@ -2253,7 +2269,7 @@ class Fianetfraud extends Module
             '---------------------------------------'
         );
 
-        //echo '<textarea>' . $xml_element_control->getXML() . '</textarea>';
+        
         return $stack;
     }
 
@@ -2469,7 +2485,7 @@ class Fianetfraud extends Module
         }
 
         return '<link rel="stylesheet" type="text/css" href="'
-        . __PS_BASE_URI__ . 'modules/' . $this->name . '/views/css/toolbarAdmin.css" />';
+        . __PS_BASE_URI__ . 'modules/' . $this->name . '/views/css/fianetfraud.css" />';
     }
 
     /**
@@ -3060,6 +3076,15 @@ class Fianetfraud extends Module
     {
         $id_cart = $params['cart']->id;
         
+        if ($this->checkCartID($id_cart) == false) {
+         //inserts the order into the certissim table with the state previously set
+            self::insertCertissimOrder(array(
+            'id_cart' => (int) $id_cart,
+            'id_certissim_state' => '0',
+            'customer_ip_address' => Tools::getRemoteAddr(),
+            'date' => date('Y-m-d H:i:s')));
+        }
+        
         //if copilot enabled
         if (Configuration::get('CERTISSIM_COPILOT_STATUS')) {
             $xml = $this->buildXMLOrder($id_cart, true);
@@ -3199,6 +3224,7 @@ class Fianetfraud extends Module
             . 'FROM `' . _DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME . "` "
             . "WHERE `id_cart` = '" . (int) $id_cart . "'";
         $query_result = Db::getInstance()->getRow($sql);
+       
         if ($query_result['authid'] != null || $query_result['authid'] != '') {
             CertissimLogger::insertLog(
                 __METHOD__ . ' : ' . __LINE__,

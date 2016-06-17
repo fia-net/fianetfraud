@@ -43,5 +43,5 @@ if (Tools::getValue('token') == Tools::getAdminToken($certissim->getSiteid().$ce
     /*Get all FIA-NET reevaluations*/
     fianetfraud::getReevaluations();
 } else {
-    Tools::redirect('Location: ../');
+    Tools::redirect(null);
 }
