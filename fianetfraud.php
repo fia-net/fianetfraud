@@ -121,7 +121,7 @@ class Fianetfraud extends Module
     public function __construct()
     {
         $this->name = 'fianetfraud';
-        $this->version = '3.15';
+        $this->version = '3.16';
         $this->tab = 'payment_security';
         $this->author = 'Fia-Net';
         $this->module_key = '8c9a49cceb36f910a39feda51753f466';
@@ -210,6 +210,7 @@ class Fianetfraud extends Module
             && $this->registerHook('backOfficeHeader')
             && $this->registerHook('backBeforePayment')
             && $this->registerHook('Cart')
+            && $this->registerHook('paymentTop')
             && $this->registerHook('postUpdateOrderStatus'));
     }
 
@@ -821,31 +822,13 @@ class Fianetfraud extends Module
             . "WHERE `label`='$state_label'";
         $state_id = Db::getInstance()->getValue($state_sql);
        
-        if (version_compare(_PS_VERSION_, '1.7', '<')) {
-            //update the order into the certissim table with the state previously set
-            self::updateCertissimOrder(
-                $params['order']->id_cart,
-                array(
-                'id_order' => (int) $params['order']->id,
-                'id_certissim_state' => $state_id,
-                'date' => date('Y-m-d H:i:s'),
-                'paiement' => $payment_name,
-                ),
-                true
-            );
-        } else {
-            //insert order in certissim table
-            if ($this->checkCartID($params['order']->id_cart) == false) {
-                self::insertCertissimOrder(array(
-                    'id_cart' => (int) $params['order']->id_cart,
-                    'id_order' => (int) $params['order']->id,
-                    'id_certissim_state' => $state_id,
-                    'customer_ip_address' => $this->context->cookie->custom_ip,
-                    'date' => date('Y-m-d H:i:s'),
-                    'paiement' => $payment_name,
-                ));
-            }
-        }
+        //update the order into the certissim table with the state previously set
+        self::updateCertissimOrder($params['order']->id_cart, array(
+            'id_order' => (int)$params['order']->id,
+            'id_certissim_state' => $state_id,
+            'date' => date('Y-m-d H:i:s'),
+            'paiement' => $payment_name,
+        ), true);
 
         return true;
     }
@@ -869,19 +852,22 @@ class Fianetfraud extends Module
             $state = Db::getInstance()->getValue($sql);
             CertissimLogger::insertLog(
                 __METHOD__ . ' : ' . __LINE__,
-                'Commande $id_order en état ' . $state
+                'Commande '.$id_order.' en état ' . $state
             );
 
             if ($state == 'ready to send') {
                 //if order ready to send, sending
+                $order = new Order($id_order);
 
-                $sent_to_certissim = $this->buildAndSend($id_order);
-                if (!$sent_to_certissim) {
-                    CertissimLogger::insertLog(
-                        __METHOD__ . ' : ' . __LINE__,
-                        'Envoi de la commande ' . $id_order . ' vers Certissim a échoué.'
-                    );
-                    return false;
+                if ($order->module != 'franfinance') {
+                    $sent_to_certissim = $this->buildAndSend($id_order);
+                    if (!$sent_to_certissim) {
+                        CertissimLogger::insertLog(
+                            __METHOD__ . ' : ' . __LINE__,
+                            'Envoi de la commande ' . $id_order . ' vers Certissim a échoué.'
+                        );
+                        return false;
+                    }
                 }
             } else { //if order not ready to be sent: log
                 CertissimLogger::insertLog(
@@ -2471,16 +2457,20 @@ class Fianetfraud extends Module
 
     public function hookBackOfficeHeader()
     {
-        $orders_id = $this->getFranfinanceOrdersToSend();
-        if ($orders_id) {
-            foreach ($orders_id as $value) {
-                CertissimLogger::insertLog(
-                    __METHOD__ . ' : ' . __LINE__,
-                    'Commande Franfinance envoyée : id_order = ' . $value['id_order']
-                );
-                $this->buildAndSend(
-                    $value['id_order']
-                );
+        if (Configuration::get('CERTISSIM_FRANFINANCE_STATUS')) {
+            $orders_id = $this->getFranfinanceOrdersToSend();
+            if ($orders_id) {
+                foreach ($orders_id as $value) {
+                    CertissimLogger::insertLog(
+                        __METHOD__ . ' : ' . __LINE__,
+                        'Commande Franfinance envoyée : id_order = ' . $value['id_order']
+                    );
+                    if ($this->getFranfinanceSolution($value['id_order']) != false) {
+                        $this->buildAndSend(
+                            $value['id_order']
+                        );
+                    }
+                }
             }
         }
 
@@ -2945,6 +2935,27 @@ class Fianetfraud extends Module
             }
         }
     }
+    
+    
+    /**
+     * Insert id_cart on fianetsceau_order table when page payment is called
+     * 
+     * @param type Array 
+     */
+    public function hookPaymentTop($params)
+    {
+        $id_cart = $params['cart']->id;
+        if ($this->checkCartID($id_cart) == false) {
+            //inserts the order into the certissim table with the state previously set
+            self::insertCertissimOrder(
+                array(
+                'id_cart' => (int)$id_cart,
+                'id_certissim_state' => '0',
+                'customer_ip_address' => Tools::getRemoteAddr(),
+                'date' => date('Y-m-d H:i:s'))
+            );
+        }
+    }
 
 
     /**
@@ -3005,7 +3016,7 @@ class Fianetfraud extends Module
 
         if ($exist) {
             Db::getInstance()->execute(
-                'CREATE TABLE `' . _DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME_TEMP . '` '
+                'CREATE TABLE IF NOT EXISTS `' . _DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME_TEMP . '` '
                 . 'LIKE `' . pSQL(_DB_PREFIX_ . self::CERTISSIM_ORDER_TABLE_NAME) . '`'
             );
             Db::getInstance()->execute(
@@ -3075,16 +3086,7 @@ class Fianetfraud extends Module
     public function hookBackBeforePayment($params)
     {
         $id_cart = $params['cart']->id;
-        
-        if ($this->checkCartID($id_cart) == false) {
-         //inserts the order into the certissim table with the state previously set
-            self::insertCertissimOrder(array(
-            'id_cart' => (int) $id_cart,
-            'id_certissim_state' => '0',
-            'customer_ip_address' => Tools::getRemoteAddr(),
-            'date' => date('Y-m-d H:i:s')));
-        }
-        
+                
         //if copilot enabled
         if (Configuration::get('CERTISSIM_COPILOT_STATUS')) {
             $xml = $this->buildXMLOrder($id_cart, true);
